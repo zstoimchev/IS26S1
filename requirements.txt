@@ -1,0 +1,3 @@
+famnit_gym@git+https://github.com/DomenSoberlFamnit/famnit-gym
+
+gymnasium
