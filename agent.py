@@ -1,8 +1,9 @@
 import gymnasium as gym
 import famnit_gym
+import random
 
 # Create and reset the environment
-env = gym.make('famnit_gym/Astronaut-v1', render_mode='human')
+env = gym.make('famnit_gym/Astronaut-v1', render_mode=None)
 observation, info = env.reset()
 
 
@@ -43,21 +44,56 @@ def learn(
     current_values[fun_action] += alpha * error
 
 
-# Execute random actions
-state = get_state(observation)
+def choose_action(fun_state, epsilon=0.2):
+    # choose randomly for 20% of the time...
+    if random.random() < epsilon:
+        return random.randrange(2)
+
+    values = get_q_values(fun_state)
+    if values[0] == values[1]:
+        return random.randrange(2)
+
+    return 0 if values[0] > values[1] else 1
+
+
+for episode in range(1000):
+    observation, info = env.reset()
+    state = get_state(observation)
+    done = False
+    steps = 0
+
+    while not done:
+        action = choose_action(state)
+        observation, reward, terminated, truncated, info = env.step(action)
+        next_state = get_state(observation)
+
+        reward = -100.0 if terminated else 1.0
+        learn(state, action, reward, next_state, terminated)
+
+        state = next_state
+        steps += 1
+        done = terminated or truncated
+
+    print(f"Episode {episode + 1}: survived {steps} steps")
+
+env.close()
+
+# Watch the trained agent.
+env = gym.make('famnit_gym/Astronaut-v1', render_mode='human')
+observation, info = env.reset()
+
 done = False
+steps = 0
+
 while not done:
-    action = env.action_space.sample()
+    state = get_state(observation)
+    action = choose_action(state, epsilon=0.0)
+
     observation, reward, terminated, truncated, info = env.step(action)
-    next_state = get_state(observation)
 
-    reward = -100.00 if terminated else 1.0
-    learn(state, action, reward, next_state, terminated)
-
-    print(f"State: {state}, Q-values: {get_q_values(state)}")
-
-    state = next_state
+    steps += 1
     done = terminated or truncated
 
-# Close the environment
+print(f"Trained agent survived {steps} steps")
+
 env.close()
