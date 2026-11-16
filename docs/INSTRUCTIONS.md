@@ -7,7 +7,7 @@ Implement the Q-learning algorithm and train an AI agent to play the Astronaut g
 - Find an efficient way to represent a state.
 - Use discrete states and the classical Q-learning algorithm, where states and actions are tabulated. 
 - Determine an efficient loss function. 
-- Train the agent an present the loss convergence graph.
+- Train the agent and present the loss convergence graph.
 
 
 ### 2. Avoiding the asteroids (0 - 5 points)
