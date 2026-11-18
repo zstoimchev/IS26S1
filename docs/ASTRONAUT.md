@@ -31,17 +31,17 @@ Use `render_mode=None` for a headless simulation at maximum speed.
 
 | Integer | Meaning        |
 |:-------:|----------------|
-| 0       | Thrust off     |
-| 1       | Thrust on      |
+|    0    | Thrust off     |
+|    1    | Thrust on      |
 
 ## Observations
 
 A numpy array of `float32` values. The base environment observes only the astronaut:
 
-| Index | Variable      | Meaning                                          |
-|:-----:|---------------|--------------------------------------------------|
-| 0     | `astronaut_y` | The vertical position of the astronaut (pixels). |
-| 1     | `astronaut_v` | The vertical velocity of the astronaut (pixels / second). |
+| Index | Variable      | Meaning                                                   |
+|:-----:|---------------|-----------------------------------------------------------|
+|   0   | `astronaut_y` | The vertical position of the astronaut (pixels).          |
+|   1   | `astronaut_v` | The vertical velocity of the astronaut (pixels / second). |
 
 The `Asteroids` and `Oxygen` wrappers append their own variables to the end of the array, in the order the wrappers are applied. The names of all variables, in the order they appear in the observation, are given in `info['variables']`:
 
@@ -70,9 +70,9 @@ The default reward function returns:
 
 | Reward | Event                                                |
 |:------:|------------------------------------------------------|
-| -1     | Collision.                                           |
-| 1      | Oxygen tank picked (only with the `Oxygen` wrapper). |
-| 0      | Otherwise.                                           |
+|   -1   | Collision.                                           |
+|   1    | Oxygen tank picked (only with the `Oxygen` wrapper). |
+|   0    | Otherwise.                                           |
 
 A custom reward function can be given through the `reward_function` option. It receives a dictionary with the following entries and returns the reward for the step:
 
@@ -108,8 +108,8 @@ Options can also be passed to `reset()`. They are combined with the default valu
 
 Adds asteroids flying towards the astronaut at random heights. A collision with an asteroid terminates the episode. Appends the position of the next approaching asteroid to the observation:
 
-| Variable     | Meaning                                         |
-|--------------|-------------------------------------------------|
+| Variable     | Meaning                                           |
+|--------------|---------------------------------------------------|
 | `asteroid_x` | The horizontal position of the asteroid (pixels). |
 | `asteroid_y` | The vertical position of the asteroid (pixels).   |
 

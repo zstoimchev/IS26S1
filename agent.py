@@ -1,36 +1,45 @@
 import gymnasium as gym
-import famnit_gym
 import random
 import csv
 import time
 
+from famnit_gym.wrappers.astronaut import Asteroids
+from famnit_gym.wrappers.astronaut import Oxygen
+from famnit_gym.wrappers.astronaut import Video
+from famnit_gym.wrappers.astronaut import DebugOverlay
+
 random.seed(42)
 env = gym.make('famnit_gym/Astronaut-v1', render_mode=None)
+env = Asteroids(env)
 
 
 def get_state(fun_observation):
-    height, velocity = fun_observation
+    height, velocity, asteroid_x, asteroid_y = fun_observation
 
     height_bin = int(height // 25)
     velocity_bin = int(velocity // 20)
 
-    return height_bin, velocity_bin
+    # the astronaut's default horizontal position is 300
+    distance_bin = int((asteroid_x - 300) // 100)
+    relative_height_bin = int((asteroid_y - height) // 50)
+
+    return height_bin, velocity_bin, distance_bin, relative_height_bin
 
 
-q_table: dict[tuple[int, int], list[float]] = {}
+q_table: dict[tuple[int, int, int, int], list[float]] = {}
 
 
-def get_q_values(fun_state: tuple[int, int]) -> list[float]:
+def get_q_values(fun_state: tuple[int, int, int, int]) -> list[float]:
     if fun_state not in q_table:
         q_table[fun_state] = [0.0, 0.0]
     return q_table[fun_state]
 
 
 def learn(
-        fun_state: tuple[int, int],
+        fun_state: tuple[int, int, int, int],
         fun_action: int,
         fun_reward: float,
-        fun_next_state: tuple[int, int],
+        fun_next_state: tuple[int, int, int, int],
         fun_terminated: bool):
     alpha = 0.10  # learning rate
     gamma = 0.99  # importance of future rewards
@@ -61,8 +70,8 @@ def choose_action(fun_state, epsilon=0.2):
 training_results = []
 training_start = time.perf_counter()
 
-for episode in range(1000):
-    observation, info = env.reset(seed=42 + episode)
+for episode in range(1_000_000):
+    observation, info = env.reset(seed = 42 + episode)
     state = get_state(observation)
     done = False
     steps = 0
@@ -96,7 +105,10 @@ env.close()
 
 # evaluate
 env = gym.make('famnit_gym/Astronaut-v1', render_mode="human")
-observation, info = env.reset(seed=42)
+env = Asteroids(env)
+env = Video(env, filename='astronaut.webm')
+env = DebugOverlay(env)
+observation, info = env.reset(seed = 41)
 
 done = False
 steps = 0
