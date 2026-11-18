@@ -1,18 +1,28 @@
-import gymnasium as gym
-import famnit_gym
-import random
 import csv
+import random
 import time
+
+import gymnasium as gym
+
+# import famnit_gym
+from famnit_gym.wrappers.astronaut import Asteroids
+
+# from famnit_gym.wrappers.astronaut import  DebugOverlay
 
 random.seed(42)
 env = gym.make('famnit_gym/Astronaut-v1', render_mode=None)
+env = Asteroids(env)  # Add the asteroids to the game.
+# env = DebugOverlay(env)  # Additional information on screen.
+
+# env.reset:  (array([400.,   0.], dtype=float32), {'variables': ['astronaut_y', 'astronaut_v'], 'steps': 0, 'collision': 'no'})
+# env.reset:  (array([ 400.,    0., 1300.,  235.], dtype=float32), {'variables': ['astronaut_y', 'astronaut_v', 'asteroid_x', 'asteroid_y'], 'steps': 0, 'collision': 'no'})
 
 
 def get_state(fun_observation):
-    height, velocity = fun_observation
+    height, velocity, ax, ay = fun_observation
 
     height_bin = int(height // 25)
-    velocity_bin = int(velocity // 20)
+    velocity_bin = int(velocity // 40)
 
     return height_bin, velocity_bin
 
@@ -27,11 +37,12 @@ def get_q_values(fun_state: tuple[int, int]) -> list[float]:
 
 
 def learn(
-        fun_state: tuple[int, int],
-        fun_action: int,
-        fun_reward: float,
-        fun_next_state: tuple[int, int],
-        fun_terminated: bool):
+    fun_state: tuple[int, int],
+    fun_action: int,
+    fun_reward: float,
+    fun_next_state: tuple[int, int],
+    fun_terminated: bool,
+):
     alpha = 0.10  # learning rate
     gamma = 0.99  # importance of future rewards
 
@@ -43,7 +54,7 @@ def learn(
 
     error = target - current_values[fun_action]
     current_values[fun_action] += alpha * error
-    return error ** 2  #
+    return error**2
 
 
 def choose_action(fun_state, epsilon=0.2):
@@ -82,9 +93,9 @@ for episode in range(1000):
 
     average_loss = total_loss / steps
     training_results.append((episode + 1, steps, average_loss))
-    print(f"Episode {episode + 1}: survived {steps} steps, loss: {average_loss:.6f}")
+    print(f'Episode {episode + 1}: survived {steps} steps, loss: {average_loss:.6f}')
 
-print(f"Training time: {time.perf_counter() - training_start:.2f} seconds")
+print(f'Training time: {time.perf_counter() - training_start:.2f} seconds')
 
 # save measurements
 with open('training.csv', 'w', newline='') as file:
@@ -95,8 +106,10 @@ with open('training.csv', 'w', newline='') as file:
 env.close()
 
 # evaluate
-env = gym.make('famnit_gym/Astronaut-v1', render_mode="human")
+env = gym.make('famnit_gym/Astronaut-v1', render_mode='human')
+env = Asteroids(env)  # Add the asteroids to the game.
 observation, info = env.reset(seed=42)
+
 
 done = False
 steps = 0
@@ -110,6 +123,6 @@ while not done:
     steps += 1
     done = terminated or truncated
 
-print(f"Trained agent survived {steps} steps")
+print(f'Trained agent survived {steps} steps')
 
 env.close()
