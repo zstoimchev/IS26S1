@@ -16,14 +16,14 @@ env = Asteroids(env)
 def get_state(fun_observation):
     height, velocity, asteroid_x, asteroid_y = fun_observation
 
-    height_bin = int(height // 25)
-    velocity_bin = int(velocity // 20)
+    height_bin = int(height // 50)
+    velocity_bin = int(velocity // 80)
 
     # the astronaut's default horizontal position is 300
-    distance_bin = int((asteroid_x - 300) // 100)
-    relative_height_bin = int((asteroid_y - height) // 50)
+    distance_bin = min(3, int((asteroid_x - 300) // 200))
+    asteroid_height_bin = int(asteroid_y // 100)
 
-    return height_bin, velocity_bin, distance_bin, relative_height_bin
+    return height_bin, velocity_bin, distance_bin, asteroid_height_bin
 
 
 q_table: dict[tuple[int, int, int, int], list[float]] = {}
@@ -70,15 +70,19 @@ def choose_action(fun_state, epsilon=0.2):
 training_results = []
 training_start = time.perf_counter()
 
-for episode in range(1_000_000):
-    observation, info = env.reset(seed = 42 + episode)
+episodes = 10_000
+for episode in range(episodes):
+    progress = episode / max(1, episodes - 1)
+    epsilon = 0.5 * (0.02 / 0.5) ** progress
+
+    observation, info = env.reset(seed=42 + episode)
     state = get_state(observation)
     done = False
     steps = 0
     total_loss = 0.0
 
     while not done:
-        action = choose_action(state)
+        action = choose_action(state, epsilon)
         observation, reward, terminated, truncated, info = env.step(action)
         next_state = get_state(observation)
 
@@ -108,7 +112,7 @@ env = gym.make('famnit_gym/Astronaut-v1', render_mode="human")
 env = Asteroids(env)
 env = Video(env, filename='astronaut.webm')
 env = DebugOverlay(env)
-observation, info = env.reset(seed = 41)
+observation, info = env.reset(seed=42)
 
 done = False
 steps = 0
@@ -125,3 +129,27 @@ while not done:
 print(f"Trained agent survived {steps} steps")
 
 env.close()
+
+# Test the trained policy on 50 new asteroid sequences.
+env = Asteroids(gym.make('famnit_gym/Astronaut-v1', render_mode=None))
+successes = 0
+total_steps = 0
+
+for seed in range(20000, 20050):
+    observation, info = env.reset(seed=seed)
+    steps = 0
+
+    while True:
+        action = choose_action(get_state(observation), epsilon=0.0)
+        observation, reward, terminated, truncated, info = env.step(action)
+        steps += 1
+
+        if terminated or truncated:
+            successes += int(truncated and not terminated)
+            break
+
+    total_steps += steps
+
+env.close()
+
+print(f"Successful flights: {successes}/50")
