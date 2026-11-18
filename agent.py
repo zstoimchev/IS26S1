@@ -96,7 +96,7 @@ for episode in range(EPISODES):
 
     while True:
         action = choose_action(state, epsilon)
-        observation, reward, terminated, truncated, info, frames, discount = (perform_action(env, action))
+        observation, reward, terminated, truncated, info, frames, discount = perform_action(env, action)
         next_state = get_state(observation)
         total_loss += learn(state, action, reward, next_state, terminated, discount)
         steps += frames
@@ -118,20 +118,7 @@ with open("training.csv", "w", newline="") as file:
     writer.writerows(training_results)
 env.close()
 
-# Record one trained episode, preserving your original video and overlay.
-env = make_env(render_mode="human", record=True)
-observation, info = env.reset(seed=42)
-steps = 0
-while True:
-    action = choose_eval_action(get_state(observation))
-    observation, _, terminated, truncated, info, frames, _ = perform_action(env, action)
-    steps += frames
-    if terminated or truncated:
-        break
-print(f"Trained agent survived {steps} steps")
-env.close()
-
-# Test the trained policy on the same 50 unseen seeds as your remote branch.
+# test on 50 new seeds
 env = make_env()
 successes = 0
 total_steps = 0
@@ -157,3 +144,16 @@ print(f"Average survival: {total_steps / 50:.1f} / 1200")
 print(f"Q-table states: {len(q_table)}")
 print(f"Unseen evaluation states (decision visits): {unseen_states}")
 print(f"Episode endings: {dict(collision_reasons)}")
+
+# Record one trained episode, preserving your original video and overlay
+env = make_env(render_mode="human", record=True)
+observation, info = env.reset(seed=42)
+steps = 0
+while True:
+    action = choose_eval_action(get_state(observation))
+    observation, _, terminated, truncated, info, frames, _ = perform_action(env, action)
+    steps += frames
+    if terminated or truncated:
+        break
+print(f"Trained agent survived {steps} steps")
+env.close()
