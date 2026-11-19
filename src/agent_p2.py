@@ -1,18 +1,17 @@
-import gymnasium as gym
-import random
 import csv
+import random
 import time
 from collections import Counter
 
-from famnit_gym.wrappers.astronaut import Asteroids, Oxygen, DebugOverlay, Video
+import gymnasium as gym
+from famnit_gym.wrappers.astronaut import Asteroids, DebugOverlay, Video
 
 random.seed(42)
 
-# Gamma applies per simulated frame. Six frames correspond to ~0.988 discount
-GAMMA = 0.998
-FRAMES_PER_ACTION = 6
-EPISODES = 15_000
-q_table: dict[tuple[int, int, int, int], list[float]] = {}
+GAMMA = 0.998  # per-frame discount factor for future rewards
+FRAMES_PER_ACTION = 6  # one chosen actions is repeated up to 6 times, to reduce teh number of decisions
+EPISODES = 15_000  # number of training attempts
+q_table = {}
 
 
 def make_env(render_mode=None, record=False):
@@ -25,6 +24,11 @@ def make_env(render_mode=None, record=False):
 
 
 def get_state(fun_observation):
+    """
+    Bins the astronaut height and velocity, plus asteroid distance and height, into discrete indices.
+    Distance is capped so far asteroids share one bin.
+    The returning tuple lets similar situations share learned values
+    """
     height, velocity, asteroid_x, asteroid_y = fun_observation
     height_bin = int(height // 50)
     velocity_bin = int(velocity // 80)
@@ -42,7 +46,7 @@ def get_q_values(fun_state: tuple[int, int, int, int]) -> list[float]:
 def learn(fun_state, fun_action, fun_reward, fun_next_state, fun_terminated, transition_discount):
     alpha = 0.10  # learning rate
     current_values = get_q_values(fun_state)
-    target = fun_reward
+    target = fun_reward  # accumulated reward plus the discounted best next-state value, or just the reward if terminal
     if not fun_terminated:
         target += transition_discount * max(get_q_values(fun_next_state))
     error = target - current_values[fun_action]
@@ -51,6 +55,10 @@ def learn(fun_state, fun_action, fun_reward, fun_next_state, fun_terminated, tra
 
 
 def choose_action(fun_state, fun_epsilon=0.2):
+    """
+    Balances exploration and exploitation: pick a random action with probability epsilon.
+    Otherwise take the higher Q-value. Ties are broken randomly
+    """
     if random.random() < fun_epsilon:
         return random.randrange(2)
     values = get_q_values(fun_state)
@@ -60,6 +68,7 @@ def choose_action(fun_state, fun_epsilon=0.2):
 
 
 def choose_eval_action(fun_state):
+    # Chooses the best action for a given state, without any exploration
     values = q_table.get(fun_state)
     if values is None:
         return 0
@@ -67,11 +76,19 @@ def choose_eval_action(fun_state):
 
 
 def perform_action(env, action):
+    """
+    Repeat one action for up to six frames, accumulating discounted rewards.
+    Cumulative reward is the sum with discount weights.
+    Discount starts at one and multiplies by gamma each frame.
+    Frames counts how many frames the action was repeated, up to six.
+    Return discount then weights the next-state value in learn
+    """
     cumulative_reward = 0.0
     discount = 1.0
     frames = 0
     for _ in range(FRAMES_PER_ACTION):
         observation, _env_reward, terminated, truncated, info = env.step(action)
+        # reward is 1 for survival and -100 for collision
         reward = -100.0 if terminated else 1.0
         cumulative_reward += discount * reward
         discount *= GAMMA
@@ -87,6 +104,7 @@ training_start = time.perf_counter()
 
 for episode in range(EPISODES):
     progress = episode / max(1, EPISODES - 1)
+    # gradually reduce exploration from 50 % to 2 %
     epsilon = 0.5 * (0.02 / 0.5) ** progress
     observation, info = env.reset(seed=42 + episode)
     state = get_state(observation)
