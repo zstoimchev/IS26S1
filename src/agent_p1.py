@@ -3,6 +3,7 @@ import random
 import time
 
 import gymnasium as gym
+from famnit_gym.wrappers.astronaut import DebugOverlay, Video
 
 random.seed(42)
 env = gym.make('famnit_gym/Astronaut-v1', render_mode=None)
@@ -100,6 +101,8 @@ env.close()
 
 # evaluate
 env = gym.make('famnit_gym/Astronaut-v1', render_mode="human")
+env = Video(env, "astronaut.webm")
+env = DebugOverlay(env)
 observation, info = env.reset(seed=42)
 
 done = False
